@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D Shooting Game - Timer & Restart Game with Touch</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Goldman:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #info { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial; }
+        
+        #restartBtn { 
+            position: absolute; 
+            top: 10px; 
+            right: 10px; 
+            padding: 5px 10px; 
+            background: #4444ff; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-family: Arial;
+        }
+        #restartBtn:hover { background: #0000cc; }
+        canvas { display: block; }
+
+        #info {
+  font-family: "Goldman", serif;
+  font-weight: 400;
+  font-style: normal;
+  color:black;
+}
+
+#info {
+  font-family: "Goldman", serif;
+  font-weight: 400;
+  font-style: normal;
+  color:black;
+}
+
+#restartBtn {
+  font-family: "Goldman", serif;
+  font-weight: 400;
+  font-style: normal;
+  color:white;
+}
+    </style>
+</head>
+<body>
+    <div id="info">Score: 0 | Level: 1 | Power-up: None | Time: 30</div>
+    <button id="restartBtn">Restart Game</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // Enhanced lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 10, 7.5);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Light grey background with pixel grid overlay
+        scene.background = new THREE.Color(0xd3d3d3);
+
+        function createPixelGridTexture() {
+            const size = 128;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const context = canvas.getContext('2d');
+
+            const imageData = context.createImageData(size, size);
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                const value = Math.random() > 0.5 ? 180 : 150;
+                imageData.data[i] = value;
+                imageData.data[i + 1] = value;
+                imageData.data[i + 2] = value;
+                imageData.data[i + 3] = 255;
+            }
+            context.putImageData(imageData, 0, 0);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(20, 20);
+
+            const planeGeometry = new THREE.PlaneGeometry(100, 100);
+            const planeMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 0.3
+            });
+            const gridPlane = new THREE.Mesh(planeGeometry, planeMaterial);
+            gridPlane.position.z = -50;
+            scene.add(gridPlane);
+            return gridPlane;
+        }
+
+        const gridPlane = createPixelGridTexture();
+
+        // Game variables
+        let score = 0;
+        let level = 1;
+        let targets = [];
+        let particles = [];
+        let powerUps = [];
+        let currentPowerUp = null;
+        let powerUpTimer = 0;
+        let levelTimer = 30;
+        let gameActive = true;
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const infoElement = document.getElementById('info');
+        const restartButton = document.getElementById('restartBtn');
+
+        // Audio setup
+        const listener = new THREE.AudioListener();
+        camera.add(listener);
+        const audioLoader = new THREE.AudioLoader();
+        
+        const shootSound = new THREE.Audio(listener);
+        const explosionSound = new THREE.Audio(listener);
+        const powerUpSound = new THREE.Audio(listener);
+        const backgroundMusic = new THREE.Audio(listener);
+
+        audioLoader.load('zapi.ogg', buffer => shootSound.setBuffer(buffer));
+        audioLoader.load('boom.wav', buffer => explosionSound.setBuffer(buffer));
+        audioLoader.load('power-up.wav', buffer => powerUpSound.setBuffer(buffer));
+        audioLoader.load('bg.wav', buffer => {
+            backgroundMusic.setBuffer(buffer);
+            backgroundMusic.setLoop(true);
+            backgroundMusic.setVolume(0.5);
+            backgroundMusic.play();
+        });
+
+        // Target creation
+        function createTarget() {
+            const baseGeometry = new THREE.BoxGeometry(3, 3, 3);
+            const sphereGeometry = new THREE.SphereGeometry(2, 32, 32);
+            const tetraGeometry = new THREE.TetrahedronGeometry(2.5);
+
+            const geometry = new THREE.BufferGeometry().copy(baseGeometry);
+            geometry.morphAttributes.position = [
+                baseGeometry.attributes.position.clone(),
+                sphereGeometry.attributes.position.clone(),
+                tetraGeometry.attributes.position.clone()
+            ];
+
+            const material = new THREE.MeshPhysicalMaterial({
+                color: Math.random() * 0xffffff,
+                metalness: 0.5,
+                roughness: 0.3,
+                clearcoat: 0.8,
+                reflectivity: 0.9,
+                morphTargets: true
+            });
+
+            const target = new THREE.Mesh(geometry, material);
+            target.scale.set(2, 2, 2);
+            target.castShadow = true;
+            target.receiveShadow = true;
+            
+            target.position.set(
+                (Math.random() - 0.5) * 30,
+                (Math.random() - 0.5) * 30,
+                -15 - Math.random() * 25
+            );
+            
+            target.userData.morphProgress = 0;
+            target.userData.morphSpeed = 0.01 + Math.random() * 0.02;
+            
+            scene.add(target);
+            targets.push(target);
+        }
+
+        // Power-up creation
+        function createPowerUp() {
+            const powerUpTypes = [
+                { type: 'multiShot', color: 0xff0000, duration: 5000 },
+                { type: 'bigBlast', color: 0x00ff00, duration: 7000 },
+                { type: 'rapidFire', color: 0x0000ff, duration: 6000 }
+            ];
+            
+            const powerUpData = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+            const geometry = new THREE.DodecahedronGeometry(0.8);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: powerUpData.color,
+                emissive: powerUpData.color,
+                emissiveIntensity: 0.5
+            });
+            
+            const powerUp = new THREE.Mesh(geometry, material);
+            powerUp.position.set(
+                (Math.random() - 0.5) * 20,
+                (Math.random() - 0.5) * 20,
+                -15
+            );
+            powerUp.userData = powerUpData;
+            
+            scene.add(powerUp);
+            powerUps.push(powerUp);
+        }
+
+        // Explosion
+        function createExplosion(position, scale = 1) {
+            const particleCount = 40 * scale;
+            const particleGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+            
+            for (let i = 0; i < particleCount; i++) {
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: new THREE.Color().setHSL(Math.random(), 1, 0.5)
+                });
+                const particle = new THREE.Mesh(particleGeometry, material);
+                
+                particle.position.copy(position);
+                particle.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 4 * scale,
+                    (Math.random() - 0.5) * 4 * scale,
+                    (Math.random() - 0.5) * 4 * scale
+                );
+                particle.life = 1.0;
+                
+                scene.add(particle);
+                particles.push(particle);
+            }
+            explosionSound.play();
+        }
+
+        // Unified input handler for mouse and touch
+        function handleInput(x, y) {
+            if (!gameActive) return;
+
+            mouse.x = (x / window.innerWidth) * 2 - 1;
+            mouse.y = -(y / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            
+            const powerUpIntersects = raycaster.intersectObjects(powerUps);
+            if (powerUpIntersects.length > 0) {
+                const powerUp = powerUpIntersects[0].object;
+                currentPowerUp = powerUp.userData.type;
+                powerUpTimer = powerUp.userData.duration;
+                scene.remove(powerUp);
+                powerUps = powerUps.filter(p => p !== powerUp);
+                powerUpSound.play();
+                updateInfo();
+                return;
+            }
+
+            const intersects = raycaster.intersectObjects(targets);
+            shootSound.play();
+
+            if (currentPowerUp === 'multiShot') {
+                intersects.slice(0, 3).forEach(intersect => handleHit(intersect));
+            } else if (currentPowerUp === 'bigBlast') {
+                if (intersects.length > 0) {
+                    createExplosion(intersects[0].object.position, 2);
+                    targets.forEach(target => {
+                        if (target.position.distanceTo(intersects[0].object.position) < 8) {
+                            handleHit({ object: target });
+                        }
+                    });
+                }
+            } else if (intersects.length > 0) {
+                handleHit(intersects[0]);
+            }
+        }
+
+        // Mouse click handler
+        function onMouseClick(event) {
+            event.preventDefault();
+            handleInput(event.clientX, event.clientY);
+        }
+
+        // Touch handler
+        function onTouchStart(event) {
+            event.preventDefault();
+            const touch = event.touches[0];
+            handleInput(touch.clientX, touch.clientY);
+        }
+
+        function handleHit(intersect) {
+            const target = intersect.object;
+            createExplosion(target.position);
+            scene.remove(target);
+            targets = targets.filter(t => t !== target);
+            score += 10;
+            updateInfo();
+        }
+
+        function updateInfo() {
+            infoElement.textContent = `Score: ${score} | Level: ${level} | Power-up: ${currentPowerUp || 'None'}${currentPowerUp ? ` (${Math.ceil(powerUpTimer/1000)}s)` : ''} | Time: ${Math.ceil(levelTimer)}`;
+        }
+
+        // Initialize level
+        function initLevel() {
+            if (!gameActive) return;
+            
+            targets.forEach(target => scene.remove(target));
+            powerUps.forEach(powerUp => scene.remove(powerUp));
+            particles.forEach(particle => scene.remove(particle));
+            targets = [];
+            powerUps = [];
+            particles = [];
+            currentPowerUp = null;
+            powerUpTimer = 0;
+
+            const targetCount = level * 3;
+            for (let i = 0; i < targetCount; i++) {
+                createTarget();
+            }
+            if (Math.random() < 0.3) createPowerUp();
+            levelTimer = 30;
+            updateInfo();
+        }
+
+        // Restart game function
+        function restartGame() {
+            if (!gameActive) return;
+            
+            score = 0;
+            level = 1;
+            targets.forEach(target => scene.remove(target));
+            powerUps.forEach(powerUp => scene.remove(powerUp));
+            particles.forEach(particle => scene.remove(particle));
+            targets = [];
+            powerUps = [];
+            particles = [];
+            currentPowerUp = null;
+            powerUpTimer = 0;
+            levelTimer = 30;
+
+            initLevel();
+        }
+
+        // Animation loop with timer
+        function animate() {
+            if (!gameActive) return;
+
+            requestAnimationFrame(animate);
+
+            levelTimer -= 1/60;
+            if (levelTimer <= 0) {
+                gameActive = false;
+                backgroundMusic.stop();
+                document.body.innerHTML = '<h1 style="color: white; text-align: center; margin-top: 20%; font-family: Arial;">Time Up!<br>Final Score: ' + score + '</h1>';
+                window.removeEventListener('click', onMouseClick);
+                window.removeEventListener('touchstart', onTouchStart);
+                window.removeEventListener('resize', resizeHandler);
+                return;
+            }
+
+            particles.forEach((particle, index) => {
+                particle.position.add(particle.velocity);
+                particle.life -= 0.02;
+                particle.scale.setScalar(particle.life);
+                if (particle.life <= 0) {
+                    scene.remove(particle);
+                    particles.splice(index, 1);
+                }
+            });
+
+            targets.forEach(target => {
+                target.rotation.x += 0.01;
+                target.rotation.y += 0.01;
+                
+                target.userData.morphProgress += target.userData.morphSpeed;
+                const t = (Math.sin(target.userData.morphProgress) + 1) / 2;
+                
+                target.morphTargetInfluences[0] = 1 - t;
+                target.morphTargetInfluences[1] = t * (1 - t);
+                target.morphTargetInfluences[2] = t;
+                
+                if (target.userData.morphProgress > Math.PI * 2) {
+                    target.userData.morphProgress = 0;
+                }
+            });
+
+            powerUps.forEach(powerUp => {
+                powerUp.rotation.x += 0.03;
+                powerUp.rotation.y += 0.03;
+                powerUp.position.z += Math.sin(Date.now() * 0.001) * 0.01;
+            });
+
+            if (currentPowerUp && powerUpTimer > 0) {
+                powerUpTimer -= 16;
+                if (powerUpTimer <= 0) {
+                    currentPowerUp = null;
+                }
+            }
+
+            if (targets.length === 0) {
+                level++;
+                initLevel();
+            }
+
+            updateInfo();
+            renderer.render(scene, camera);
+        }
+
+        // Setup
+        camera.position.z = 10;
+        initLevel();
+        animate();
+
+        // Event listeners
+        window.addEventListener('click', onMouseClick);
+        window.addEventListener('touchstart', onTouchStart, { passive: false });
+        restartButton.addEventListener('click', restartGame);
+        
+        function resizeHandler() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener('resize', resizeHandler);
+    </script>
+</body>
+</html>
