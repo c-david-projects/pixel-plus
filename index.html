@@ -1,84 +1,76 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <title>Pixel Plus</title>
+    <title>3D Shooting Game - Wireframe with Black Background</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Goldman:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; }
-        #info { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial; }
-        #restartBtn { 
-            position: absolute; 
-            top: 10px; 
-            right: 10px; 
-            padding: 5px 10px; 
-            background: #4444ff; 
-            color: white; 
-            border: none; 
-            cursor: pointer; 
-            font-family: Arial;
+        body {
+            margin: 0;
+            overflow: hidden;
         }
-        #restartBtn:hover { background: #0000cc; }
-        canvas { display: block; }
-        #mobileMessage {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            font-family: Arial;
-            font-size: 20px;
-            z-index: 1000;
-        }
+
         #info {
-  font-family: "Goldman", serif;
-  font-weight: 400;
-  font-style: normal;
-  color:black;
-}
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial;
+        }
 
-#info {
-  font-family: "Goldman", serif;
-  font-weight: 400;
-  font-style: normal;
-  color:white;
-}
+        #restartBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background: #4444ff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-family: Arial;
+        }
 
-#restartBtn {
-  font-family: "Goldman", serif;
-  font-weight: 400;
-  font-style: normal;
-  color:white;
-}
+        #restartBtn:hover {
+            background: #0000cc;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #info {
+            font-family: "Goldman", serif;
+            font-weight: 400;
+            font-style: normal;
+            color: black;
+        }
+
+        #info {
+            font-family: "Goldman", serif;
+            font-weight: 400;
+            font-style: normal;
+            color: white;
+        }
+
+        #restartBtn {
+            font-family: "Goldman", serif;
+            font-weight: 400;
+            font-style: normal;
+            color: white;
+        }
     </style>
 </head>
+
 <body>
     <div id="info">Score: 0 | Level: 1 | Power-up: None | Time: 30</div>
     <button id="restartBtn">Restart Game</button>
-    <div id="mobileMessage" style="display: none;">
-        This game is best experienced on desktop.<br>Please open it on a desktop browser for optimal performance.
-    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
 
     <script>
-        // Check if on mobile device
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const mobileMessage = document.getElementById('mobileMessage');
-
-        if (isMobile) {
-            mobileMessage.style.display = 'flex';
-            throw new Error("Mobile device detected - game stopped");
-        }
-
         // Scene setup
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -87,7 +79,7 @@
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // Static lighting
+        // Enhanced lighting
         const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
         scene.add(ambientLight);
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -96,7 +88,7 @@
         scene.add(directionalLight);
 
         // Black background
-        scene.background = new THREE.Color(0x000000);
+        scene.background = new THREE.Color(0x000000); // Pure black
 
         // Game variables
         let score = 0;
@@ -117,7 +109,7 @@
         const listener = new THREE.AudioListener();
         camera.add(listener);
         const audioLoader = new THREE.AudioLoader();
-        
+
         const shootSound = new THREE.Audio(listener);
         const explosionSound = new THREE.Audio(listener);
         const powerUpSound = new THREE.Audio(listener);
@@ -156,16 +148,16 @@
             target.scale.set(2, 2, 2);
             target.castShadow = true;
             target.receiveShadow = true;
-            
+
             target.position.set(
                 (Math.random() - 0.5) * 30,
                 (Math.random() - 0.5) * 30,
                 -15 - Math.random() * 25
             );
-            
+
             target.userData.morphProgress = 0;
             target.userData.morphSpeed = 0.01 + Math.random() * 0.02;
-            
+
             scene.add(target);
             targets.push(target);
         }
@@ -177,16 +169,16 @@
                 { type: 'bigBlast', color: 0x00ff00, duration: 7000 },
                 { type: 'rapidFire', color: 0x0000ff, duration: 6000 }
             ];
-            
+
             const powerUpData = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
             const geometry = new THREE.DodecahedronGeometry(0.8);
-            
+
             const material = new THREE.MeshBasicMaterial({
                 color: powerUpData.color,
                 wireframe: true,
                 wireframeLinewidth: 2
             });
-            
+
             const powerUp = new THREE.Mesh(geometry, material);
             powerUp.position.set(
                 (Math.random() - 0.5) * 20,
@@ -194,7 +186,7 @@
                 -15
             );
             powerUp.userData = powerUpData;
-            
+
             scene.add(powerUp);
             powerUps.push(powerUp);
         }
@@ -203,14 +195,14 @@
         function createExplosion(position, scale = 1) {
             const particleCount = 40 * scale;
             const particleGeometry = new THREE.SphereGeometry(0.15, 8, 8);
-            
+
             for (let i = 0; i < particleCount; i++) {
-                const material = new THREE.MeshBasicMaterial({ 
+                const material = new THREE.MeshBasicMaterial({
                     color: new THREE.Color().setHSL(Math.random(), 1, 0.5),
                     wireframe: true
                 });
                 const particle = new THREE.Mesh(particleGeometry, material);
-                
+
                 particle.position.copy(position);
                 particle.velocity = new THREE.Vector3(
                     (Math.random() - 0.5) * 4 * scale,
@@ -218,7 +210,7 @@
                     (Math.random() - 0.5) * 4 * scale
                 );
                 particle.life = 1.0;
-                
+
                 scene.add(particle);
                 particles.push(particle);
             }
@@ -233,7 +225,7 @@
             mouse.y = -(y / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
-            
+
             const powerUpIntersects = raycaster.intersectObjects(powerUps);
             if (powerUpIntersects.length > 0) {
                 const powerUp = powerUpIntersects[0].object;
@@ -246,7 +238,22 @@
                 return;
             }
 
-            const intersects = raycaster.intersectObjects(targets);
+            const intersects = raycaster.intersectObjects(targets, true);
+            if (intersects.length === 0) {
+                // Try finding the nearest target manually
+                let closestTarget = null;
+                let minDistance = 3; // Allow clicks within this distance
+
+                targets.forEach(target => {
+                    const distance = target.position.distanceTo(raycaster.ray.origin);
+                    if (distance < minDistance) {
+                        closestTarget = target;
+                        minDistance = distance;
+                    }
+                });
+
+                if (closestTarget) handleHit({ object: closestTarget });
+            }
             shootSound.play();
 
             if (currentPowerUp === 'multiShot') {
@@ -265,15 +272,11 @@
             }
         }
 
-        function onMouseClick(event) {
+        function onUserAction(event) {
             event.preventDefault();
-            handleInput(event.clientX, event.clientY);
-        }
-
-        function onTouchStart(event) {
-            event.preventDefault();
-            const touch = event.touches[0];
-            handleInput(touch.clientX, touch.clientY);
+            const x = event.clientX || event.touches[0].clientX;
+            const y = event.clientY || event.touches[0].clientY;
+            handleInput(x, y);
         }
 
         function handleHit(intersect) {
@@ -286,13 +289,13 @@
         }
 
         function updateInfo() {
-            infoElement.textContent = `Score: ${score} | Level: ${level} | Power-up: ${currentPowerUp || 'None'}${currentPowerUp ? ` (${Math.ceil(powerUpTimer/1000)}s)` : ''} | Time: ${Math.ceil(levelTimer)}`;
+            infoElement.textContent = `Score: ${score} | Level: ${level} | Power-up: ${currentPowerUp || 'None'}${currentPowerUp ? ` (${Math.ceil(powerUpTimer / 1000)}s)` : ''} | Time: ${Math.ceil(levelTimer)}`;
         }
 
         // Initialize level
         function initLevel() {
             if (!gameActive) return;
-            
+
             targets.forEach(target => scene.remove(target));
             powerUps.forEach(powerUp => scene.remove(powerUp));
             particles.forEach(particle => scene.remove(particle));
@@ -314,7 +317,7 @@
         // Restart game
         function restartGame() {
             if (!gameActive) return;
-            
+
             score = 0;
             level = 1;
             targets.forEach(target => scene.remove(target));
@@ -336,7 +339,7 @@
 
             requestAnimationFrame(animate);
 
-            levelTimer -= 1/60;
+            levelTimer -= 1 / 60;
             if (levelTimer <= 0) {
                 gameActive = false;
                 backgroundMusic.stop();
@@ -360,14 +363,14 @@
             targets.forEach(target => {
                 target.rotation.x += 0.01;
                 target.rotation.y += 0.01;
-                
+
                 target.userData.morphProgress += target.userData.morphSpeed;
                 const t = (Math.sin(target.userData.morphProgress) + 1) / 2;
-                
+
                 target.morphTargetInfluences[0] = 1 - t;
                 target.morphTargetInfluences[1] = t * (1 - t);
                 target.morphTargetInfluences[2] = t;
-                
+
                 if (target.userData.morphProgress > Math.PI * 2) {
                     target.userData.morphProgress = 0;
                 }
@@ -401,10 +404,10 @@
         animate();
 
         // Event listeners
-        window.addEventListener('click', onMouseClick);
-        window.addEventListener('touchstart', onTouchStart, { passive: false });
+        window.addEventListener('click', onUserAction);
+        window.addEventListener('touchstart', onUserAction, { passive: false });
         restartButton.addEventListener('click', restartGame);
-        
+
         function resizeHandler() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
@@ -413,4 +416,5 @@
         window.addEventListener('resize', resizeHandler);
     </script>
 </body>
+
 </html>
