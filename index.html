@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>3D Shooting Game - Timer & Restart Game with Touch</title>
+    <title>3D Shooting Game - Wireframe with Black Background</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Goldman:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; }
         #info { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial; }
-        
         #restartBtn { 
             position: absolute; 
             top: 10px; 
@@ -34,7 +33,7 @@
   font-family: "Goldman", serif;
   font-weight: 400;
   font-style: normal;
-  color:black;
+  color:white;
 }
 
 #restartBtn {
@@ -69,44 +68,8 @@
         directionalLight.castShadow = true;
         scene.add(directionalLight);
 
-        // Light grey background with pixel grid overlay
-        scene.background = new THREE.Color(0xd3d3d3);
-
-        function createPixelGridTexture() {
-            const size = 128;
-            const canvas = document.createElement('canvas');
-            canvas.width = size;
-            canvas.height = size;
-            const context = canvas.getContext('2d');
-
-            const imageData = context.createImageData(size, size);
-            for (let i = 0; i < imageData.data.length; i += 4) {
-                const value = Math.random() > 0.5 ? 180 : 150;
-                imageData.data[i] = value;
-                imageData.data[i + 1] = value;
-                imageData.data[i + 2] = value;
-                imageData.data[i + 3] = 255;
-            }
-            context.putImageData(imageData, 0, 0);
-
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
-            texture.repeat.set(20, 20);
-
-            const planeGeometry = new THREE.PlaneGeometry(100, 100);
-            const planeMaterial = new THREE.MeshBasicMaterial({
-                map: texture,
-                transparent: true,
-                opacity: 0.3
-            });
-            const gridPlane = new THREE.Mesh(planeGeometry, planeMaterial);
-            gridPlane.position.z = -50;
-            scene.add(gridPlane);
-            return gridPlane;
-        }
-
-        const gridPlane = createPixelGridTexture();
+        // Black background
+        scene.background = new THREE.Color(0x000000); // Pure black
 
         // Game variables
         let score = 0;
@@ -143,7 +106,7 @@
             backgroundMusic.play();
         });
 
-        // Target creation
+        // Target creation (wireframe)
         function createTarget() {
             const baseGeometry = new THREE.BoxGeometry(3, 3, 3);
             const sphereGeometry = new THREE.SphereGeometry(2, 32, 32);
@@ -156,13 +119,10 @@
                 tetraGeometry.attributes.position.clone()
             ];
 
-            const material = new THREE.MeshPhysicalMaterial({
+            const material = new THREE.MeshBasicMaterial({
                 color: Math.random() * 0xffffff,
-                metalness: 0.5,
-                roughness: 0.3,
-                clearcoat: 0.8,
-                reflectivity: 0.9,
-                morphTargets: true
+                wireframe: true,
+                wireframeLinewidth: 2
             });
 
             const target = new THREE.Mesh(geometry, material);
@@ -183,7 +143,7 @@
             targets.push(target);
         }
 
-        // Power-up creation
+        // Power-up creation (wireframe)
         function createPowerUp() {
             const powerUpTypes = [
                 { type: 'multiShot', color: 0xff0000, duration: 5000 },
@@ -193,10 +153,11 @@
             
             const powerUpData = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
             const geometry = new THREE.DodecahedronGeometry(0.8);
-            const material = new THREE.MeshPhongMaterial({ 
+            
+            const material = new THREE.MeshBasicMaterial({
                 color: powerUpData.color,
-                emissive: powerUpData.color,
-                emissiveIntensity: 0.5
+                wireframe: true,
+                wireframeLinewidth: 2
             });
             
             const powerUp = new THREE.Mesh(geometry, material);
@@ -211,14 +172,15 @@
             powerUps.push(powerUp);
         }
 
-        // Explosion
+        // Explosion (wireframe particles)
         function createExplosion(position, scale = 1) {
             const particleCount = 40 * scale;
             const particleGeometry = new THREE.SphereGeometry(0.15, 8, 8);
             
             for (let i = 0; i < particleCount; i++) {
                 const material = new THREE.MeshBasicMaterial({ 
-                    color: new THREE.Color().setHSL(Math.random(), 1, 0.5)
+                    color: new THREE.Color().setHSL(Math.random(), 1, 0.5),
+                    wireframe: true
                 });
                 const particle = new THREE.Mesh(particleGeometry, material);
                 
@@ -236,7 +198,7 @@
             explosionSound.play();
         }
 
-        // Unified input handler for mouse and touch
+        // Unified input handler
         function handleInput(x, y) {
             if (!gameActive) return;
 
@@ -276,13 +238,11 @@
             }
         }
 
-        // Mouse click handler
         function onMouseClick(event) {
             event.preventDefault();
             handleInput(event.clientX, event.clientY);
         }
 
-        // Touch handler
         function onTouchStart(event) {
             event.preventDefault();
             const touch = event.touches[0];
@@ -324,7 +284,7 @@
             updateInfo();
         }
 
-        // Restart game function
+        // Restart game
         function restartGame() {
             if (!gameActive) return;
             
@@ -343,7 +303,7 @@
             initLevel();
         }
 
-        // Animation loop with timer
+        // Animation loop
         function animate() {
             if (!gameActive) return;
 
