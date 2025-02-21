@@ -1,10 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Pixel Plus</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Goldman:wght@400;700&display=swap" rel="stylesheet">
+    <title>3D Shooting Game - Wireframe Style with Level Up Sound</title>
     <style>
         body { margin: 0; overflow: hidden; }
         #info { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial; }
@@ -37,30 +34,10 @@
             font-size: 20px;
             z-index: 1000;
         }
-        #info {
-  font-family: "Goldman", serif;
-  font-weight: 400;
-  font-style: normal;
-  color:black;
-}
-
-#info {
-  font-family: "Goldman", serif;
-  font-weight: 400;
-  font-style: normal;
-  color:white;
-}
-
-#restartBtn {
-  font-family: "Goldman", serif;
-  font-weight: 400;
-  font-style: normal;
-  color:white;
-}
     </style>
 </head>
 <body>
-    <div id="info">Score: 0 | Level: 1 | Power-up: None | Time: 30</div>
+    <div id="info">Score: 0 | Level: 1 | Time: 30</div>
     <button id="restartBtn">Restart Game</button>
     <div id="mobileMessage" style="display: none;">
         This game is best experienced on desktop.<br>Please open it on a desktop browser for optimal performance.
@@ -103,9 +80,6 @@
         let level = 1;
         let targets = [];
         let particles = [];
-        let powerUps = [];
-        let currentPowerUp = null;
-        let powerUpTimer = 0;
         let levelTimer = 30;
         let gameActive = true;
         const raycaster = new THREE.Raycaster();
@@ -120,12 +94,22 @@
         
         const shootSound = new THREE.Audio(listener);
         const explosionSound = new THREE.Audio(listener);
-        const powerUpSound = new THREE.Audio(listener);
+        const levelUpSound = new THREE.Audio(listener);
         const backgroundMusic = new THREE.Audio(listener);
 
-        audioLoader.load('zapi.ogg', buffer => shootSound.setBuffer(buffer));
-        audioLoader.load('boom.wav', buffer => explosionSound.setBuffer(buffer));
-        audioLoader.load('power-up.wav', buffer => powerUpSound.setBuffer(buffer));
+        // Load sounds with callbacks to ensure they're ready
+        audioLoader.load('zapi.ogg', buffer => {
+            shootSound.setBuffer(buffer);
+            shootSound.setVolume(0.5);
+        });
+        audioLoader.load('boom.wav', buffer => {
+            explosionSound.setBuffer(buffer);
+            explosionSound.setVolume(0.5);
+        });
+        audioLoader.load('power-up.wav', buffer => {
+            levelUpSound.setBuffer(buffer);
+            levelUpSound.setVolume(0.5);
+        });
         audioLoader.load('bg.wav', buffer => {
             backgroundMusic.setBuffer(buffer);
             backgroundMusic.setLoop(true);
@@ -170,35 +154,6 @@
             targets.push(target);
         }
 
-        // Power-up creation (wireframe)
-        function createPowerUp() {
-            const powerUpTypes = [
-                { type: 'multiShot', color: 0xff0000, duration: 5000 },
-                { type: 'bigBlast', color: 0x00ff00, duration: 7000 },
-                { type: 'rapidFire', color: 0x0000ff, duration: 6000 }
-            ];
-            
-            const powerUpData = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
-            const geometry = new THREE.DodecahedronGeometry(0.8);
-            
-            const material = new THREE.MeshBasicMaterial({
-                color: powerUpData.color,
-                wireframe: true,
-                wireframeLinewidth: 2
-            });
-            
-            const powerUp = new THREE.Mesh(geometry, material);
-            powerUp.position.set(
-                (Math.random() - 0.5) * 20,
-                (Math.random() - 0.5) * 20,
-                -15
-            );
-            powerUp.userData = powerUpData;
-            
-            scene.add(powerUp);
-            powerUps.push(powerUp);
-        }
-
         // Explosion (wireframe particles)
         function createExplosion(position, scale = 1) {
             const particleCount = 40 * scale;
@@ -234,33 +189,9 @@
 
             raycaster.setFromCamera(mouse, camera);
             
-            const powerUpIntersects = raycaster.intersectObjects(powerUps);
-            if (powerUpIntersects.length > 0) {
-                const powerUp = powerUpIntersects[0].object;
-                currentPowerUp = powerUp.userData.type;
-                powerUpTimer = powerUp.userData.duration;
-                scene.remove(powerUp);
-                powerUps = powerUps.filter(p => p !== powerUp);
-                powerUpSound.play();
-                updateInfo();
-                return;
-            }
-
             const intersects = raycaster.intersectObjects(targets);
-            shootSound.play();
-
-            if (currentPowerUp === 'multiShot') {
-                intersects.slice(0, 3).forEach(intersect => handleHit(intersect));
-            } else if (currentPowerUp === 'bigBlast') {
-                if (intersects.length > 0) {
-                    createExplosion(intersects[0].object.position, 2);
-                    targets.forEach(target => {
-                        if (target.position.distanceTo(intersects[0].object.position) < 8) {
-                            handleHit({ object: target });
-                        }
-                    });
-                }
-            } else if (intersects.length > 0) {
+            if (intersects.length > 0) {
+                shootSound.play();
                 handleHit(intersects[0]);
             }
         }
@@ -286,7 +217,7 @@
         }
 
         function updateInfo() {
-            infoElement.textContent = `Score: ${score} | Level: ${level} | Power-up: ${currentPowerUp || 'None'}${currentPowerUp ? ` (${Math.ceil(powerUpTimer/1000)}s)` : ''} | Time: ${Math.ceil(levelTimer)}`;
+            infoElement.textContent = `Score: ${score} | Level: ${level} | Time: ${Math.ceil(levelTimer)}`;
         }
 
         // Initialize level
@@ -294,19 +225,14 @@
             if (!gameActive) return;
             
             targets.forEach(target => scene.remove(target));
-            powerUps.forEach(powerUp => scene.remove(powerUp));
             particles.forEach(particle => scene.remove(particle));
             targets = [];
-            powerUps = [];
             particles = [];
-            currentPowerUp = null;
-            powerUpTimer = 0;
 
             const targetCount = level * 3;
             for (let i = 0; i < targetCount; i++) {
                 createTarget();
             }
-            if (Math.random() < 0.3) createPowerUp();
             levelTimer = 30;
             updateInfo();
         }
@@ -318,19 +244,14 @@
             score = 0;
             level = 1;
             targets.forEach(target => scene.remove(target));
-            powerUps.forEach(powerUp => scene.remove(powerUp));
             particles.forEach(particle => scene.remove(particle));
             targets = [];
-            powerUps = [];
             particles = [];
-            currentPowerUp = null;
-            powerUpTimer = 0;
-            levelTimer = 30;
 
             initLevel();
         }
 
-        // Animation loop
+        // Animation loop with level-up sound
         function animate() {
             if (!gameActive) return;
 
@@ -340,7 +261,7 @@
             if (levelTimer <= 0) {
                 gameActive = false;
                 backgroundMusic.stop();
-                document.body.innerHTML = '<h1 style="color: white; text-align: center; margin-top: 20%; font-family: Arial;">Time Up!<br>Final Score: ' + score + '</h1>';
+                document.body.innerHTML = '<h1 style="color: black; text-align: center; margin-top: 20%; font-family: Arial;">Time Up!<br>Final Score: ' + score + '</h1>';
                 window.removeEventListener('click', onMouseClick);
                 window.removeEventListener('touchstart', onTouchStart);
                 window.removeEventListener('resize', resizeHandler);
@@ -373,20 +294,11 @@
                 }
             });
 
-            powerUps.forEach(powerUp => {
-                powerUp.rotation.x += 0.03;
-                powerUp.rotation.y += 0.03;
-                powerUp.position.z += Math.sin(Date.now() * 0.001) * 0.01;
-            });
-
-            if (currentPowerUp && powerUpTimer > 0) {
-                powerUpTimer -= 16;
-                if (powerUpTimer <= 0) {
-                    currentPowerUp = null;
-                }
-            }
-
             if (targets.length === 0) {
+                if (levelUpSound.isPlaying) {
+                    levelUpSound.stop(); // Stop if already playing to avoid overlap
+                }
+                levelUpSound.play(); // Play level-up sound
                 level++;
                 initLevel();
             }
