@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>3D Shooting Game - Wireframe Style with Level Up and Time Up Sounds</title>
+    <title>3D Shooting Game - Wireframe Style with Morphing Time Up Screen</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Goldman:wght@400;700&display=swap" rel="stylesheet">
@@ -21,7 +21,7 @@
         }
         #restartBtn:hover { background: #0000cc; }
         canvas { display: block; }
-        #mobileMessage {
+        #mobileMessage, #timeUpScreen {
             position: fixed;
             top: 0;
             left: 0;
@@ -37,6 +37,9 @@
             font-size: 20px;
             z-index: 1000;
         }
+        #mobileMessage { display: none; }
+        #timeUpScreen { display: none; font-size: 40px; flex-direction: column; }
+
         #info {
         font-family: "Goldman", serif;
         font-weight: 400;
@@ -62,8 +65,12 @@
 <body>
     <div id="info">Score: 0 | Level: 1 | Time: 30</div>
     <button id="restartBtn">Restart Game</button>
-    <div id="mobileMessage" style="display: none;">
+    <div id="mobileMessage">
         This game is best experienced on desktop.<br>Please open it on a desktop browser for optimal performance.
+    </div>
+    <div id="timeUpScreen">
+        <div>Time Up!</div>
+        <div id="finalScore"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
@@ -79,7 +86,7 @@
             throw new Error("Mobile device detected - game stopped");
         }
 
-        // Scene setup
+        // Scene setup for main game
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -87,7 +94,7 @@
         renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // Static lighting
+        // Static lighting for main game
         const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
         scene.add(ambientLight);
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -95,7 +102,7 @@
         directionalLight.castShadow = true;
         scene.add(directionalLight);
 
-        // Black background
+        // Black background for main game
         scene.background = new THREE.Color(0x000000);
 
         // Game variables
@@ -109,6 +116,8 @@
         const mouse = new THREE.Vector2();
         const infoElement = document.getElementById('info');
         const restartButton = document.getElementById('restartBtn');
+        const timeUpScreen = document.getElementById('timeUpScreen');
+        const finalScoreElement = document.getElementById('finalScore');
 
         // Audio setup
         const listener = new THREE.AudioListener();
@@ -121,7 +130,6 @@
         const timeUpSound = new THREE.Audio(listener);
         const backgroundMusic = new THREE.Audio(listener);
 
-        // Load sounds with callbacks
         audioLoader.load('zapi.ogg', buffer => {
             shootSound.setBuffer(buffer);
             shootSound.setVolume(0.5);
@@ -134,7 +142,7 @@
             levelUpSound.setBuffer(buffer);
             levelUpSound.setVolume(0.5);
         });
-        audioLoader.load('downfilter 10.wav', buffer => { 
+        audioLoader.load('downfilter 10.wav', buffer => {
             timeUpSound.setBuffer(buffer);
             timeUpSound.setVolume(0.7);
         });
@@ -275,8 +283,95 @@
             particles.forEach(particle => scene.remove(particle));
             targets = [];
             particles = [];
-
+            timeUpScreen.style.display = 'none'; // Hide time-up screen on restart
+            gameActive = true;
+            renderer.domElement.style.display = 'block'; // Show canvas again
+            backgroundMusic.play(); // Restart background music
             initLevel();
+        }
+
+        // Time Up screen with morphing objects
+        const timeUpObjects = [];
+        function initTimeUpScreen() {
+            scene.clear(); // Clear the main game scene
+            renderer.domElement.style.display = 'none'; // Hide main game canvas
+            timeUpScreen.style.display = 'flex';
+            finalScoreElement.textContent = `Final Score: ${score}`;
+
+            // Create a new scene for the time-up screen
+            const timeUpScene = new THREE.Scene();
+            const timeUpCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            timeUpCamera.position.z = 20;
+
+            // Add ambient light for visibility
+            const timeUpAmbient = new THREE.AmbientLight(0x404040, 0.5);
+            timeUpScene.add(timeUpAmbient);
+            const timeUpDirectional = new THREE.DirectionalLight(0xffffff, 1);
+            timeUpDirectional.position.set(5, 10, 7.5);
+            timeUpScene.add(timeUpDirectional);
+
+            // Create morphing objects
+            const objectCount = 10;
+            const geometries = [
+                new THREE.BoxGeometry(2, 2, 2),
+                new THREE.SphereGeometry(1.5, 32, 32),
+                new THREE.TetrahedronGeometry(1.8),
+                new THREE.IcosahedronGeometry(1.5)
+            ];
+
+            for (let i = 0; i < objectCount; i++) {
+                const baseGeometry = geometries[Math.floor(Math.random() * geometries.length)];
+                const geometry = new THREE.BufferGeometry().copy(baseGeometry);
+                geometry.morphAttributes.position = [
+                    geometries[0].attributes.position.clone(),
+                    geometries[1].attributes.position.clone(),
+                    geometries[2].attributes.position.clone(),
+                    geometries[3].attributes.position.clone()
+                ];
+
+                const material = new THREE.MeshBasicMaterial({
+                    color: Math.random() * 0xffffff,
+                    wireframe: true,
+                    wireframeLinewidth: 2
+                });
+
+                const object = new THREE.Mesh(geometry, material);
+                object.position.set(
+                    (Math.random() - 0.5) * 40,
+                    (Math.random() - 0.5) * 20,
+                    (Math.random() - 0.5) * 20 - 10
+                );
+                object.userData.morphProgress = Math.random() * Math.PI * 2;
+                object.userData.morphSpeed = 0.02 + Math.random() * 0.03;
+                timeUpScene.add(object);
+                timeUpObjects.push(object);
+            }
+
+            // Animation for time-up screen
+            function animateTimeUp() {
+                requestAnimationFrame(animateTimeUp);
+
+                timeUpObjects.forEach(obj => {
+                    obj.rotation.x += 0.01;
+                    obj.rotation.y += 0.01;
+                    
+                    obj.userData.morphProgress += obj.userData.morphSpeed;
+                    const t = (Math.sin(obj.userData.morphProgress) + 1) / 2;
+                    
+                    obj.morphTargetInfluences[0] = 1 - t;
+                    obj.morphTargetInfluences[1] = t * (1 - t);
+                    obj.morphTargetInfluences[2] = t * (1 - t) * t;
+                    obj.morphTargetInfluences[3] = t;
+                    
+                    if (obj.userData.morphProgress > Math.PI * 2) {
+                        obj.userData.morphProgress = 0;
+                    }
+                });
+
+                renderer.render(timeUpScene, timeUpCamera);
+            }
+
+            animateTimeUp();
         }
 
         // Animation loop with level-up and time-up sounds
@@ -293,10 +388,7 @@
                     timeUpSound.stop();
                 }
                 timeUpSound.play(); // Play time-up sound
-                document.body.innerHTML = '<h1 style="color: black; text-align: center; margin-top: 20%; font-family: Arial;">Time Up!<br>Final Score: ' + score + '</h1>';
-                window.removeEventListener('click', onMouseClick);
-                window.removeEventListener('touchstart', onTouchStart);
-                window.removeEventListener('resize', resizeHandler);
+                initTimeUpScreen(); // Show time-up screen with morphing objects
                 return;
             }
 
