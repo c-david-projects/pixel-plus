@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>3D Shooting Game - Wireframe Style with Level Up Sound</title>
+    <title>3D Shooting Game - Wireframe Style with Level Up and Time Up Sounds</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Goldman:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; }
         #info { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial; }
@@ -33,6 +36,26 @@
             font-family: Arial;
             font-size: 20px;
             z-index: 1000;
+        }
+        #info {
+        font-family: "Goldman", serif;
+        font-weight: 400;
+        font-style: normal;
+        color:black;
+        }
+
+        #info {
+        font-family: "Goldman", serif;
+        font-weight: 400;
+        font-style: normal;
+        color:white;
+        }
+
+        #restartBtn {
+        font-family: "Goldman", serif;
+        font-weight: 400;
+        font-style: normal;
+        color:white;
         }
     </style>
 </head>
@@ -95,9 +118,10 @@
         const shootSound = new THREE.Audio(listener);
         const explosionSound = new THREE.Audio(listener);
         const levelUpSound = new THREE.Audio(listener);
+        const timeUpSound = new THREE.Audio(listener);
         const backgroundMusic = new THREE.Audio(listener);
 
-        // Load sounds with callbacks to ensure they're ready
+        // Load sounds with callbacks
         audioLoader.load('zapi.ogg', buffer => {
             shootSound.setBuffer(buffer);
             shootSound.setVolume(0.5);
@@ -109,6 +133,10 @@
         audioLoader.load('power-up.wav', buffer => {
             levelUpSound.setBuffer(buffer);
             levelUpSound.setVolume(0.5);
+        });
+        audioLoader.load('downfilter 10.wav', buffer => { 
+            timeUpSound.setBuffer(buffer);
+            timeUpSound.setVolume(0.7);
         });
         audioLoader.load('bg.wav', buffer => {
             backgroundMusic.setBuffer(buffer);
@@ -251,7 +279,7 @@
             initLevel();
         }
 
-        // Animation loop with level-up sound
+        // Animation loop with level-up and time-up sounds
         function animate() {
             if (!gameActive) return;
 
@@ -261,6 +289,10 @@
             if (levelTimer <= 0) {
                 gameActive = false;
                 backgroundMusic.stop();
+                if (timeUpSound.isPlaying) {
+                    timeUpSound.stop();
+                }
+                timeUpSound.play(); // Play time-up sound
                 document.body.innerHTML = '<h1 style="color: black; text-align: center; margin-top: 20%; font-family: Arial;">Time Up!<br>Final Score: ' + score + '</h1>';
                 window.removeEventListener('click', onMouseClick);
                 window.removeEventListener('touchstart', onTouchStart);
@@ -296,7 +328,7 @@
 
             if (targets.length === 0) {
                 if (levelUpSound.isPlaying) {
-                    levelUpSound.stop(); // Stop if already playing to avoid overlap
+                    levelUpSound.stop();
                 }
                 levelUpSound.play(); // Play level-up sound
                 level++;
