@@ -11,11 +11,11 @@
         #restartBtn { 
             position: absolute; 
             top: 10px; 
-            right: 10px; 
+            right: 2em; 
             padding: 5px 10px; 
-            background: #4444ff; 
+            background: transparent; 
             color: white; 
-            border: none; 
+            border: 1px solid lime; 
             cursor: pointer; 
             font-family: Arial;
         }
@@ -64,12 +64,28 @@
         * {
         cursor: url('Vector-final.png'), auto;
         }
+
+        .grow-on-hover {
+        display: inline-block;
+        vertical-align: middle;
+        -webkit-transform: perspective(1px) translateZ(0);
+        transform: perspective(1px) translateZ(0);
+        box-shadow: 0 0 1px rgba(0, 0, 0, 0);
+        -webkit-transition-duration: 0.3s;
+        transition-duration: 0.3s;
+        -webkit-transition-property: transform;
+        transition-property: transform;
+        }
+        .grow-on-hover:hover, .grow-on-hover:focus, .grow-on-hover:active {
+        -webkit-transform: scale(1.2);
+        transform: scale(1.2);
+        }
         
     </style>
 </head>
 <body class="cursor">
     <div id="info">Score: 0 | Level: 1 | Time: 30</div>
-    <button id="restartBtn">Restart Game</button>
+    <button id="restartBtn" class="grow-on-hover">Restart Game</button>
     <div id="mobileMessage">
         This game is best experienced on desktop.<br>Please open it on a desktop browser for optimal performance.
     </div>
