@@ -17,9 +17,39 @@
             color: white; 
             border: 1px solid white; 
             cursor: pointer; 
-            font-family: Arial;
         }
-        #restartBtn:hover { border:1px solid lime; }
+
+        #restartBtn:hover { border:1px solid lime; 
+            animation: restart-pulse 1s infinite;
+            transition: background-color 0.5s;
+            transition: 0.5s ease all;
+        }
+
+        @keyframes restart-pulse {
+        0% {
+            box-shadow: 0 0 0 0 lime;
+        }
+        100% {  
+            box-shadow: 0 0 0 15px rgba(255, 255, 255, 0);
+        }
+        }
+
+        .grow-on-hover {
+        display: inline-block;
+        vertical-align: middle;
+        -webkit-transform: perspective(1px) translateZ(0);
+        transform: perspective(1px) translateZ(0);
+        box-shadow: 0 0 1px rgba(0, 0, 0, 0);
+        -webkit-transition-duration: 0.3s;
+        transition-duration: 0.3s;
+        -webkit-transition-property: transform;
+        transition-property: transform;
+        }
+        .grow-on-hover:hover, .grow-on-hover:focus, .grow-on-hover:active {
+        -webkit-transform: scale(1.2);
+        transform: scale(1.2);
+        }
+
         canvas { display: block; }
         #mobileMessage, #timeUpScreen {
             position: fixed;
@@ -39,51 +69,9 @@
         }
         #mobileMessage { display: none; }
         #timeUpScreen { display: none; font-size: 40px; flex-direction: column; }
-
-        #info {
-        font-family: "Goldman", serif;
-        font-weight: 400;
-        font-style: normal;
-        color:black;
-        }
-
-        #info {
-        font-family: "Goldman", serif;
-        font-weight: 400;
-        font-style: normal;
-        color:white;
-        }
-
-        #restartBtn {
-        font-family: "Goldman", serif;
-        font-weight: 400;
-        font-style: normal;
-        color:white;
-        }
-
-        * {
-        cursor: url('Vector-final.png'), auto;
-        }
-
-        .grow-on-hover {
-        display: inline-block;
-        vertical-align: middle;
-        -webkit-transform: perspective(1px) translateZ(0);
-        transform: perspective(1px) translateZ(0);
-        box-shadow: 0 0 1px rgba(0, 0, 0, 0);
-        -webkit-transition-duration: 0.3s;
-        transition-duration: 0.3s;
-        -webkit-transition-property: transform;
-        transition-property: transform;
-        }
-        .grow-on-hover:hover, .grow-on-hover:focus, .grow-on-hover:active {
-        -webkit-transform: scale(1.2);
-        transform: scale(1.2);
-        }
-        
     </style>
 </head>
-<body class="cursor">
+<body>
     <div id="info">Score: 0 | Level: 1 | Time: 30</div>
     <button id="restartBtn" class="grow-on-hover">Restart Game</button>
     <div id="mobileMessage">
@@ -149,6 +137,7 @@
         const explosionSound = new THREE.Audio(listener);
         const levelUpSound = new THREE.Audio(listener);
         const timeUpSound = new THREE.Audio(listener);
+        const restartSound = new THREE.Audio(listener);
         const backgroundMusic = new THREE.Audio(listener);
 
         audioLoader.load('zapi.ogg', buffer => {
@@ -167,6 +156,10 @@
             timeUpSound.setBuffer(buffer);
             timeUpSound.setVolume(0.7);
         });
+        audioLoader.load('restart.wav', buffer => {
+            restartSound.setBuffer(buffer);
+            restartSound.setVolume(0.5);
+        });
         audioLoader.load('bg.wav', buffer => {
             backgroundMusic.setBuffer(buffer);
             backgroundMusic.setLoop(true);
@@ -174,7 +167,7 @@
             backgroundMusic.play();
         });
 
-        // Target creation (basic wireframe without neon glow)
+        // Target creation (basic wireframe)
         function createTarget() {
             const baseGeometry = new THREE.BoxGeometry(3, 3, 3);
             const sphereGeometry = new THREE.SphereGeometry(2, 32, 32);
@@ -294,9 +287,15 @@
             updateInfo();
         }
 
-        // Restart game
+        // Restart game with sound
         function restartGame() {
             if (!gameActive) return;
+            
+            // Ensure sound plays after user interaction
+            if (restartSound.isPlaying) {
+                restartSound.stop();
+            }
+            restartSound.play();
             
             score = 0;
             level = 1;
@@ -306,6 +305,9 @@
             particles = [];
             timeUpScreen.style.display = 'none';
             renderer.domElement.style.display = 'block';
+            if (backgroundMusic.isPlaying) {
+                backgroundMusic.stop();
+            }
             backgroundMusic.play();
             initLevel();
         }
