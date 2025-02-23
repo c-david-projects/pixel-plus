@@ -68,7 +68,7 @@
             z-index: 1000;
         }
         #mobileMessage { display: none; }
-        #timeUpScreen { display: none; font-size: 40px; flex-direction: column; }
+        #timeUpScreen { display: none; font-size: 40px; flex-direction: column; font-family: "Goldman", serif; }
 
         #info {
         font-family: "Goldman", serif;
@@ -83,11 +83,7 @@
         font-style: normal;
         color:white;
         }
-
-        #timeUpScreen {
-        font-family: "Goldman", serif;
-        }
-
+        
     </style>
 </head>
 <body>
@@ -103,8 +99,10 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+    
 
     <script>
+
         // Check if on mobile device
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const mobileMessage = document.getElementById('mobileMessage');
